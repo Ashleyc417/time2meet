@@ -8,7 +8,7 @@ import UsersModule from './users/users.module';
 import DbconfigModule from './dbconfig/dbconfig.module';
 import MailModule from './mail/mail.module';
 import MeetingsModule from './meetings/meetings.module';
-import CustomJwtModule from './custom-jwt/custom-jwt.module';
+// import CustomJwtModule from './custom-jwt/custom-jwt.module'; //removed for cognito auth
 import OAuth2Module from './oauth2/oauth2.module';
 import ServerInfoModule from './server-info/server-info.module';
 import ConfigModule from './config/config.module';
@@ -34,7 +34,7 @@ import ConfigService from './config/config.service';
     DbconfigModule,
     MeetingsModule,
     OAuth2Module,
-    CustomJwtModule,
+    // CustomJwtModule,   // removed for cognito auth
     MailModule,
     ServerInfoModule,
     CacherModule,

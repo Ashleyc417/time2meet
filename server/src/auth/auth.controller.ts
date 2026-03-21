@@ -11,7 +11,7 @@ import {
   UseGuards,
   Logger,
   Res,
-  ServiceUnavailableException,
+  // ServiceUnavailableException, // using cognito, not needed
   ConflictException,
 } from '@nestjs/common';
 import {
@@ -35,8 +35,8 @@ import {
 } from '../common-responses';
 import ConfigService from '../config/config.service';
 import { isBooleanStringTrue } from '../config/env.validation';
-import CustomJwtService from '../custom-jwt/custom-jwt.service';
-import { SECONDS_PER_MINUTE } from '../dates.utils';
+// import CustomJwtService from '../custom-jwt/custom-jwt.service'; // using cognito, not needed
+import { SECONDS_PER_MINUTE } from '../dates.utils'; 
 import OAuth2Service, { OAuth2Reason } from '../oauth2/oauth2.service';
 import {
   OAuth2ProviderType,
@@ -78,7 +78,7 @@ export class AuthController {
 
   constructor(
     private authService: AuthService,
-    private jwtService: CustomJwtService,
+    // private jwtService: CustomJwtService, // removed
     private oauth2Service: OAuth2Service,
     private usersService: UsersService,
     configService: ConfigService,
@@ -98,14 +98,14 @@ export class AuthController {
     );
   }
 
-  private async createTokenAndUpdateSavedTimestamp(user: User) {
-    const { payload, token } = this.jwtService.serializeUserToJwt(user);
-    await this.usersService.updateTimestamp(user, payload.iat);
-    return {
-      ...UserToUserResponse(user),
-      token,
-    };
-  }
+  // private async createTokenAndUpdateSavedTimestamp(user: User) {
+  //   const { payload, token } = this.jwtService.serializeUserToJwt(user);
+  //   await this.usersService.updateTimestamp(user, payload.iat);
+  //   return {
+  //     ...UserToUserResponse(user),
+  //     token,
+  //   };
+  // }
 
   private convertUserCreationError(err: any): Error {
     if (err instanceof UserAlreadyExistsError) {
@@ -141,32 +141,57 @@ export class AuthController {
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
+    // if (this.verifySignupEmailAddress) {
+    //   res.status(HttpStatus.OK);
+    //   const existingUser = await this.usersService.findOneByEmail(body.email);
+    //   if (existingUser !== null) {
+    //     // Prevent user enumeration
+    //     this.logger.debug(
+    //       `Cannot signup user with email=${body.email}: already exists`,
+    //     );
+    //     return { mustVerifyEmailAddress: true };
+    //   }
+    //   const verificationEmailWasSent =
+    //     await this.authService.generateAndSendVerificationEmail(body);
+    //   if (!verificationEmailWasSent) {
+    //     throw new ServiceUnavailableException('Please try again later');
+    //   }
+    //   return { mustVerifyEmailAddress: true };
+    // }
+    // res.status(HttpStatus.CREATED);
+    // let user: User;
+    // try {
+    //   user = await this.authService.signup(body);
+    // } catch (err) {
+    //   throw this.convertUserCreationError(err);
+    // }
+    // // TODO: avoid extra round-trip with database
+    // return this.createTokenAndUpdateSavedTimestamp(user);
     if (this.verifySignupEmailAddress) {
       res.status(HttpStatus.OK);
       const existingUser = await this.usersService.findOneByEmail(body.email);
       if (existingUser !== null) {
-        // Prevent user enumeration
         this.logger.debug(
           `Cannot signup user with email=${body.email}: already exists`,
         );
         return { mustVerifyEmailAddress: true };
       }
-      const verificationEmailWasSent =
-        await this.authService.generateAndSendVerificationEmail(body);
-      if (!verificationEmailWasSent) {
-        throw new ServiceUnavailableException('Please try again later');
-      }
+      // Cognito handles email verification — just register with Cognito
+      await this.authService.signUp(body.name, body.email, body.password, body.subscribe_to_notifications);
       return { mustVerifyEmailAddress: true };
     }
     res.status(HttpStatus.CREATED);
-    let user: User;
     try {
-      user = await this.authService.signup(body);
+      await this.authService.signUp(
+        body.name,
+        body.email,
+        body.password,
+        body.subscribe_to_notifications,
+      );
     } catch (err) {
       throw this.convertUserCreationError(err);
     }
-    // TODO: avoid extra round-trip with database
-    return this.createTokenAndUpdateSavedTimestamp(user);
+    return { mustVerifyEmailAddress: true };
   }
 
   @ApiOperation({
@@ -179,16 +204,22 @@ export class AuthController {
   @ApiConflictResponse({ type: ConflictResponse })
   @Post('verify-email')
   @HttpCode(HttpStatus.NO_CONTENT)
+  // async verifyEmail(@Body() body: VerifyEmailAddressDto): Promise<void> {
+  //   let user: User | null = null;
+  //   try {
+  //     user = await this.authService.signupIfEmailIsVerified(body);
+  //   } catch (err) {
+  //     throw this.convertUserCreationError(err);
+  //   }
+  //   if (!user) {
+  //     throw new UnauthorizedException();
+  //   }
   async verifyEmail(@Body() body: VerifyEmailAddressDto): Promise<void> {
-    let user: User | null = null;
-    try {
-      user = await this.authService.signupIfEmailIsVerified(body);
-    } catch (err) {
-      throw this.convertUserCreationError(err);
-    }
-    if (!user) {
-      throw new UnauthorizedException();
-    }
+  try {
+    await this.authService.confirmSignUp(body.email, body.code);
+  } catch (err) {
+    throw new UnauthorizedException();
+  }
   }
 
   @ApiOperation({
@@ -202,20 +233,15 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() body: LocalLoginDto): Promise<UserResponseWithToken> {
-    // TODO: rate limit based on IP address as well
-    if (
-      !(await this.loginRateLimiter.tryAddRequestIfWithinLimits(body.email))
-    ) {
-      throw new HttpException(
-        RATE_LIMIT_ERROR_MESSAGE,
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-    const user = await this.authService.validateUser(body.email, body.password);
-    if (user === null) {
+    const token = await this.authService.signIn(body.email, body.password);
+    if (!token) {
       throw new UnauthorizedException();
     }
-    return this.createTokenAndUpdateSavedTimestamp(user);
+    const user = await this.usersService.findOneByEmail(body.email);
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return { ...UserToUserResponse(user), token };
   }
 
   @ApiOperation({
@@ -258,8 +284,8 @@ export class AuthController {
       );
       return;
     }
-    await this.authService.resetPassword(email);
-  }
+  await this.authService.forgotPassword(email);
+}
 
   @ApiOperation({
     summary: 'Confirm password reset',
@@ -276,8 +302,8 @@ export class AuthController {
     @AuthUser() user: User,
     @Body() body: ConfirmResetPasswordDto,
   ) {
-    await this.authService.confirmResetPassword(user, body.password);
-  }
+  await this.authService.confirmForgotPassword(user.Email, body.code, body.password);
+}
 
   private async redirectToOAuth2Provider({
     providerType,
