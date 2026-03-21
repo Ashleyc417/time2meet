@@ -5,11 +5,17 @@ import BottomOverlay from 'components/BottomOverlay';
 import ButtonWithSpinner from 'components/ButtonWithSpinner';
 import { HistoryContext } from 'components/HistoryProvider';
 import OAuth2ProviderButtons from 'components/OAuth2ProviderButtons';
-import { useLoginMutation } from 'slices/api';
-import { getReqErrorMessage, useMutationWithPersistentError } from "utils/requests.utils";
+// import { useLoginMutation } from 'slices/api';  // removed for cognito
+// import { getReqErrorMessage, useMutationWithPersistentError } from "utils/requests.utils"; // removed for cognito
 import styles from './Login.module.css';
 import useSetTitle from 'utils/title.hook';
 import WaitForServerInfo from './WaitForServerInfo';
+
+// added for cognito auth
+import { cognitoSignIn } from 'utils/cognito-auth';
+import { loadTokenFromCognito } from 'slices/authentication';
+import { useAppDispatch } from 'app/hooks';
+
 
 // TODO: reduce code duplication with Signup.tsx
 
@@ -23,31 +29,53 @@ export default function Login() {
   );
 };
 
+// function LoginForm() {
+//   const [validated, setValidated] = useState(false);
+//   const navigate = useNavigate();
+//   const [login, {isUninitialized, isLoading, isSuccess, isError, error}] = useMutationWithPersistentError(useLoginMutation);
+//   const emailRef = useRef<HTMLInputElement>(null);
+//   const passwordRef = useRef<HTMLInputElement>(null);
+//   const {lastNonAuthPath} = useContext(HistoryContext);
+//   // Ref is used to avoid triggering a useEffect hook twice
+//   const lastNonAuthPathRef = useRef('/');
+//   let onSubmit: React.FormEventHandler<HTMLFormElement> | undefined;
+//   const submitBtnDisabled = isLoading;
+//   if (isUninitialized || isError) {
+//     onSubmit = (ev) => {
+//       ev.preventDefault();
+//       const form = ev.currentTarget;
+//       if (form.checkValidity()) {
+//         login({
+//           email: emailRef.current!.value,
+//           password: passwordRef.current!.value,
+//         });
+//       } else {
+//         setValidated(true);
+//       }
+//     };
+//   }
+
+//   useSetTitle('Login');
+
+//   useEffect(() => {
+//     lastNonAuthPathRef.current = lastNonAuthPath;
+//   }, [lastNonAuthPath]);
+
+//   useEffect(() => {
+//     if (isSuccess) {
+//       navigate(lastNonAuthPathRef.current);
+//     }
+//   }, [isSuccess, navigate]);
 function LoginForm() {
   const [validated, setValidated] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const [login, {isUninitialized, isLoading, isSuccess, isError, error}] = useMutationWithPersistentError(useLoginMutation);
+  const dispatch = useAppDispatch();
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const {lastNonAuthPath} = useContext(HistoryContext);
-  // Ref is used to avoid triggering a useEffect hook twice
   const lastNonAuthPathRef = useRef('/');
-  let onSubmit: React.FormEventHandler<HTMLFormElement> | undefined;
-  const submitBtnDisabled = isLoading;
-  if (isUninitialized || isError) {
-    onSubmit = (ev) => {
-      ev.preventDefault();
-      const form = ev.currentTarget;
-      if (form.checkValidity()) {
-        login({
-          email: emailRef.current!.value,
-          password: passwordRef.current!.value,
-        });
-      } else {
-        setValidated(true);
-      }
-    };
-  }
 
   useSetTitle('Login');
 
@@ -55,11 +83,27 @@ function LoginForm() {
     lastNonAuthPathRef.current = lastNonAuthPath;
   }, [lastNonAuthPath]);
 
-  useEffect(() => {
-    if (isSuccess) {
-      navigate(lastNonAuthPathRef.current);
+  const onSubmit: React.FormEventHandler<HTMLFormElement> = async (ev) => {
+    ev.preventDefault();
+    const form = ev.currentTarget;
+    if (!form.checkValidity()) {
+      setValidated(true);
+      return;
     }
-  }, [isSuccess, navigate]);
+    setIsLoading(true);
+    setError(null);
+    try {
+      await cognitoSignIn(emailRef.current!.value, passwordRef.current!.value);
+      await dispatch(loadTokenFromCognito());
+      navigate(lastNonAuthPathRef.current);
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // ... rest of JSX stays the same, just replace {error && ...} with:
+  // {error && <p className="text-danger text-center mb-0 mt-3">An error occurred: {error}</p>}
 
   return (
     <Form noValidate className={styles.loginForm} {...{validated, onSubmit}}>
@@ -96,12 +140,8 @@ function LoginForm() {
           Please enter your password.
         </Form.Control.Feedback>
       </Form.Group>
-      {error && (
-        <p className="text-danger text-center mb-0 mt-3">
-          An error occurred: {getReqErrorMessage(error)}
-        </p>
-      )}
-      <SignUpOrLogin disabled={submitBtnDisabled} />
+      {error && <p className="text-danger text-center mb-0 mt-3">An error occurred: {error}</p>}
+      <SignUpOrLogin disabled={isLoading} />
     </Form>
   );
 }
