@@ -94,7 +94,7 @@ function BrandWithLogo({onClick}: {onClick: () => void}) {
         }}>
           <Logo />
         </div>
-        CabbageMeet
+        time2meet
       </Navbar.Brand>
     </LinkContainer>
   );
