@@ -71,6 +71,11 @@ export const loadTokenFromCognito =
     try {
       const session = await fetchAuthSession();
       const token = session.tokens?.accessToken?.toString() ?? null;
+
+      //temp
+      console.log('loadTokenFromCognito token:', token ? 'present' : 'null');
+      dispatch(setTokenInternal(token));
+
       dispatch(setTokenInternal(token));
     } catch {
       dispatch(setTokenInternal(null));

@@ -27,6 +27,14 @@ export default function VerifyEmailCode({ email, password }: { email: string, pa
     try {
       await cognitoConfirmSignUp(email, codeRef.current!.value);
       await cognitoSignIn(email, password);  // sign in after verification
+      
+      // temp
+      const { fetchAuthSession } = await import('aws-amplify/auth');
+      const session = await fetchAuthSession();
+      console.log('session after login:', session);
+      console.log('tokens:', session.tokens);
+      console.log('localStorage keys:', Object.keys(localStorage));
+
       await dispatch(loadTokenFromCognito()); // load token into Redux
       navigate('/');
     } catch (err: any) {

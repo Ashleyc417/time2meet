@@ -55,7 +55,7 @@ import RateLimiterService, {
   IRateLimiter,
 } from '../rate-limiter/rate-limiter.service';
 import ResetPasswordDto from './reset-password.dto';
-import JwtAuthGuard from './jwt-auth.guard';
+import { CognitoAuthGuard } from './cognito.guard';
 import { AuthUser } from './auth-user.decorator';
 import ConfirmResetPasswordDto from './confirm-reset-password';
 import VerifyEmailAddressResponse from './verify-email-address-response';
@@ -258,7 +258,7 @@ export class AuthController {
   @ApiBearerAuth()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CognitoAuthGuard)
   async signout(
     @Query('everywhere', ParseBoolPipe) logoutEverywhere: boolean,
     @AuthUser() user: User,
@@ -297,7 +297,7 @@ export class AuthController {
   @ApiBearerAuth()
   @Post('confirm-password-reset')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CognitoAuthGuard)
   async confirmResetPassword(
     @AuthUser() user: User,
     @Body() body: ConfirmResetPasswordDto,
