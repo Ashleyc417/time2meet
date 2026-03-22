@@ -21,7 +21,10 @@ export class CognitoAuthGuard implements CanActivate {
     try {
       req.user = await this.verifier.verify(token);
       return true;
-    } catch {
+    } catch (err) {
+      //temp
+      console.error('Cognito token verification failed:', err);
+
       throw new UnauthorizedException();
     }
   }

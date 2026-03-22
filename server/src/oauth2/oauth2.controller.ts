@@ -20,7 +20,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuthUser } from '../auth/auth-user.decorator';
-import JwtAuthGuard from '../auth/jwt-auth.guard';
+import { CognitoAuthGuard } from '../auth/cognito.guard';
 import ConfigService from '../config/config.service';
 import CustomJwtService from '../custom-jwt/custom-jwt.service';
 import { assertIsNever, capitalize, encodeQueryParams } from '../misc.utils';
@@ -355,7 +355,7 @@ export class Oauth2Controller {
   @ApiBearerAuth()
   @Post('confirm-link-google-account')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CognitoAuthGuard)
   confirmLinkGoogleAccount(
     @AuthUser() user: User,
     @Body() body: ConfirmLinkAccountDto,
@@ -374,7 +374,7 @@ export class Oauth2Controller {
   @ApiBearerAuth()
   @Post('confirm-link-microsoft-account')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CognitoAuthGuard)
   confirmLinkMicrosoftAccount(
     @AuthUser() user: User,
     @Body() body: ConfirmLinkAccountDto,

@@ -94,6 +94,14 @@ function LoginForm() {
     setError(null);
     try {
       await cognitoSignIn(emailRef.current!.value, passwordRef.current!.value);
+
+      //temp 
+      const { fetchAuthSession } = await import('aws-amplify/auth');
+      const session = await fetchAuthSession();
+      console.log('session after login:', session);
+      console.log('localStorage keys:', Object.keys(localStorage));
+
+
       await dispatch(loadTokenFromCognito());
       navigate(lastNonAuthPathRef.current);
     } catch (err: any) {

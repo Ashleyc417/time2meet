@@ -4,7 +4,7 @@ import App from './App';
 import { setupStore } from 'app/store';
 import { Provider } from 'react-redux';
 import { ToastProvider } from 'components/Toast';
-import './aws-config';
+import './aws-config'
 
 
 const container = document.getElementById('root')!;
