@@ -131,7 +131,7 @@ export default class LowerCaseNamingStrategy
     return super.prefixTableName(prefix, tableName).toLowerCase();
   }
 
-  eagerJoinRelationAlias(alias: string, propertyPath: string) {
-    return super.eagerJoinRelationAlias(alias, propertyPath).toLowerCase();
-  }
+  // eagerJoinRelationAlias(alias: string, propertyPath: string) {
+  //   return super.eagerJoinRelationAlias(alias, propertyPath).toLowerCase();
+  // }
 }
