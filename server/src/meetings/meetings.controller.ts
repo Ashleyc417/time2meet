@@ -20,8 +20,8 @@ import {
 } from '@nestjs/common';
 import ConfigService from '../config/config.service';
 import { AuthUser, MaybeAuthUser } from '../auth/auth-user.decorator';
-import JwtAuthGuard from '../auth/jwt-auth.guard';
-import OptionalJwtAuthGuard from '../auth/optional-jwt-auth.guard';
+import { CognitoAuthGuard } from '../auth/cognito.guard';
+import { CognitoAuthGuard as OptionalCognitoAuthGuard } from '../auth/cognito.guard';
 import User from '../users/user.entity';
 import CreateMeetingDto from './create-meeting.dto';
 import MeetingResponse from './meeting-response';
@@ -226,7 +226,7 @@ export class MeetingsController {
   })
   @ApiBadRequestResponse({ type: BadRequestResponse })
   @Post()
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalCognitoAuthGuard)
   async createMeeting(
     @Ip() ip: string,
     @Body() body: CreateMeetingDto,
@@ -264,7 +264,7 @@ export class MeetingsController {
   @ApiBadRequestResponse({ type: BadRequestResponse })
   @ApiNotFoundResponse({ type: NotFoundResponse })
   @Get(':id')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalCognitoAuthGuard)
   async getMeeting(
     @Param('id') meetingSlug: string,
     @MaybeAuthUser() maybeUser: User | null,
@@ -287,7 +287,7 @@ export class MeetingsController {
   @ApiNotFoundResponse({ type: NotFoundResponse })
   @ApiForbiddenResponse({ type: ForbiddenResponse })
   @Patch(':id')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalCognitoAuthGuard)
   async editMeeting(
     @Param('id') meetingSlug: string,
     @Body() body: EditMeetingDto,
@@ -314,7 +314,7 @@ export class MeetingsController {
   @ApiNotFoundResponse({ type: NotFoundResponse })
   @ApiForbiddenResponse({ type: ForbiddenResponse })
   @Put(':id/schedule')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalCognitoAuthGuard)
   async scheduleMeeting(
     @Param('id') meetingSlug: string,
     @Body() body: ScheduleMeetingDto,
@@ -345,7 +345,7 @@ export class MeetingsController {
   @ApiNotFoundResponse({ type: NotFoundResponse })
   @ApiForbiddenResponse({ type: ForbiddenResponse })
   @Delete(':id/schedule')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalCognitoAuthGuard)
   async unscheduleMeeting(
     @Param('id') meetingSlug: string,
     @MaybeAuthUser() maybeUser: User | null,
@@ -368,7 +368,7 @@ export class MeetingsController {
   @ApiForbiddenResponse({ type: ForbiddenResponse })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalCognitoAuthGuard)
   async deleteMeeting(
     @Param('id') meetingSlug: string,
     @MaybeAuthUser() maybeUser: User | null,
@@ -412,7 +412,7 @@ export class MeetingsController {
   @ApiForbiddenResponse({ type: ForbiddenResponse })
   @ApiBearerAuth()
   @Put(':id/respondents/me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CognitoAuthGuard)
   async putSelfRespondent(
     @Param('id') meetingSlug: string,
     @AuthUser() user: User,
@@ -439,7 +439,7 @@ export class MeetingsController {
   })
   @ApiForbiddenResponse({ type: ForbiddenResponse })
   @Put(':id/respondents/:respondentID')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalCognitoAuthGuard)
   async updateRespondent(
     @Param('id') meetingSlug: string,
     @Param('respondentID', ParseIntPipe) respondentID: number,
@@ -470,7 +470,7 @@ export class MeetingsController {
     operationId: 'deleteRespondent',
   })
   @Delete(':id/respondents/:respondentID')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalCognitoAuthGuard)
   async deleteRespondent(
     @Param('id') meetingSlug: string,
     @Param('respondentID', ParseIntPipe) respondentID: number,
