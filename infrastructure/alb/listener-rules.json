@@ -1,0 +1,110 @@
+[
+  {
+    "_comment": "ALB HTTPS Listener (port 443) – path-based routing to microservices",
+    "_note": "Rules are evaluated in priority order (lower number = higher priority). Default action forwards to auth-service.",
+
+    "Rules": [
+      {
+        "Priority": "10",
+        "Comment": "Auth endpoints – login, signup, logout, password reset, OAuth2 redirect",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": {
+              "Values": [
+                "/api/signup",
+                "/api/verify-email",
+                "/api/login",
+                "/api/logout",
+                "/api/reset-password",
+                "/api/confirm-password-reset",
+                "/api/login-with-google",
+                "/api/login-with-microsoft",
+                "/api/signup-with-google",
+                "/api/signup-with-microsoft",
+                "/api/server-info",
+                "/redirect/*"
+              ]
+            }
+          }
+        ],
+        "Actions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}"
+          }
+        ]
+      },
+      {
+        "Priority": "20",
+        "Comment": "Meetings endpoints",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": {
+              "Values": [
+                "/api/meetings",
+                "/api/meetings/*"
+              ]
+            }
+          }
+        ],
+        "Actions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": "${MEETINGS_SERVICE_TARGET_GROUP_ARN}"
+          }
+        ]
+      },
+      {
+        "Priority": "30",
+        "Comment": "User profile endpoints",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": {
+              "Values": [
+                "/api/me",
+                "/api/me/*"
+              ]
+            }
+          }
+        ],
+        "Actions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": "${USERS_SERVICE_TARGET_GROUP_ARN}"
+          }
+        ]
+      },
+      {
+        "Priority": "40",
+        "Comment": "Health checks – all services expose /api/health",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": {
+              "Values": ["/api/health"]
+            }
+          }
+        ],
+        "Actions": [
+          {
+            "Type": "forward",
+            "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}"
+          }
+        ]
+      }
+    ],
+
+    "HealthCheck": {
+      "Path": "/api/health",
+      "Protocol": "HTTP",
+      "HealthyThresholdCount": 2,
+      "UnhealthyThresholdCount": 3,
+      "HealthCheckIntervalSeconds": 30,
+      "HealthCheckTimeoutSeconds": 5,
+      "Matcher": { "HttpCode": "200" }
+    }
+  }
+]
