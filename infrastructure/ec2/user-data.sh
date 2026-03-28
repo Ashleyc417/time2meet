@@ -83,10 +83,12 @@ EOF
 chmod 600 /opt/time2meet/.env.common
 chown ec2-user:ec2-user /opt/time2meet/.env.common
 
-# ── 5. Copy docker-compose.prod.yml from S3 or embed inline ─────────────────
-# The deploy workflow uploads docker-compose.prod.yml to the instance via SSH.
-# On first boot we just pull it from the repo via GitHub or S3 if configured.
-# For simplicity, the file is already included in infrastructure/ec2/ in the repo.
+# ── 5. Clone repo and copy docker-compose.prod.yml ───────────────────────────
+dnf install -y git
+git clone https://github.com/Ashleyc417/time2meet.git /tmp/time2meet-repo
+cp /tmp/time2meet-repo/infrastructure/ec2/docker-compose.prod.yml /opt/time2meet/docker-compose.prod.yml
+chown ec2-user:ec2-user /opt/time2meet/docker-compose.prod.yml
+rm -rf /tmp/time2meet-repo
 
 # ── 6. CloudWatch Agent config ───────────────────────────────────────────────
 cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json << 'CWEOF'

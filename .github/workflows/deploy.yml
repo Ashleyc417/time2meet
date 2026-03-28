@@ -84,8 +84,8 @@ jobs:
             --timeout-seconds 300 \
             --parameters "commands=[
               \"set -e\",
-              \"cd /opt/time2meet\",
               \"aws ecr get-login-password --region $AWS_REGION_ECR | docker login --username AWS --password-stdin $ECR_REGISTRY\",
+              \"cd /opt/time2meet\",
               \"docker compose -f docker-compose.prod.yml pull\",
               \"for svc in auth-service meetings-service users-service; do docker compose -f docker-compose.prod.yml up -d --no-deps \$svc; sleep 10; done\",
               \"docker image prune -f\"
