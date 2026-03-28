@@ -1,0 +1,132 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Local development stack – mirrors the AWS architecture:
+#
+#   MariaDB  ←→  RDS MariaDB instance
+#   Redis    ←→  ElastiCache (optional; in-memory fallback used if omitted)
+#
+#   auth-service     (port 3001)  ←→  EC2 + ALB target group: /api/auth/*
+#   meetings-service (port 3002)  ←→  EC2 + ALB target group: /api/meetings/*
+#   users-service    (port 3003)  ←→  EC2 + ALB target group: /api/me/*
+#
+# Frontend (client/) is deployed to Amplify – run it separately:
+#   cd client && npm start
+#
+# Usage:
+#   docker compose up --build
+# ─────────────────────────────────────────────────────────────────────────────
+
+x-backend-env: &backend-env
+  NODE_ENV: production
+  DATABASE_TYPE: mariadb
+  MYSQL_HOST: mariadb
+  MYSQL_PORT: "3306"
+  MYSQL_USER: time2meet
+  MYSQL_PASSWORD: time2meetpassword
+  MYSQL_DATABASE: time2meet
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  ENABLE_CORS: "true"
+  TRUST_PROXY: "true"
+  VERIFY_SIGNUP_EMAIL_ADDRESS: "true"
+
+services:
+  # ── Data Layer ──────────────────────────────────────────────────────────────
+  mariadb:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: time2meet
+      MYSQL_USER: time2meet
+      MYSQL_PASSWORD: time2meetpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Compute Layer (Microservices) ────────────────────────────────────────────
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.auth
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      PORT: "3001"
+      HOST: "0.0.0.0"
+      # Set these via a .env file or secrets manager in production:
+      # PUBLIC_URL: https://your-alb-dns.amazonaws.com
+      # COGNITO_USER_POOL_ID: us-west-2_XXXXXXXX
+      # COGNITO_CLIENT_ID: XXXXXXXXXXXXXXXXXXXXXXXXXX
+      # COGNITO_REGION: us-west-2
+      # SMTP_HOST: email-smtp.us-west-2.amazonaws.com
+      # SMTP_PORT: "587"
+      # SMTP_FROM: noreply@yourdomain.com
+    env_file:
+      - .env.auth.local
+    ports:
+      - "3001:3001"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  meetings-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.meetings
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      PORT: "3002"
+      HOST: "0.0.0.0"
+    env_file:
+      - .env.meetings.local
+    ports:
+      - "3002:3002"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  users-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.users
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      PORT: "3003"
+      HOST: "0.0.0.0"
+    env_file:
+      - .env.users.local
+    ports:
+      - "3003:3003"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  mariadb_data:

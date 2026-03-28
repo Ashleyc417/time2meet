@@ -1,0 +1,22 @@
+# Meetings Microservice
+# Handles: meeting CRUD, respondents, scheduling
+# ALB target group port: 3002
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY server/package.json server/package-lock.json \
+     server/tsconfig.json server/tsconfig.build.json \
+     server/nest-cli.json server/
+RUN cd server && npm install
+COPY server/src server/src/
+COPY server/migrations server/migrations/
+RUN find server/src -name "*.spec.ts" -delete
+RUN cd server && npm run build
+RUN cd server && npm prune --production
+
+FROM node:18-alpine
+WORKDIR /app
+COPY --from=builder /app/server/dist dist/
+COPY --from=builder /app/server/node_modules node_modules/
+ENV NODE_ENV=production
+EXPOSE 3002
+CMD ["node", "dist/src/main.meetings"]
