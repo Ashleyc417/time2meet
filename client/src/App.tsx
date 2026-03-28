@@ -39,6 +39,11 @@ import Feedback from 'components/Feedback';
 import TermsOfService from 'components/TermsOfService';
 import { useGetServerInfoQuery } from 'slices/api';
 
+// for cognito
+import { useEffect } from 'react';
+import { useAppDispatch } from 'app/hooks';
+import { loadTokenFromCognito } from 'slices/authentication';
+
 export default function App() {
   // Make sure that every single component passed to a <Route>
   // sets the document.title
@@ -89,28 +94,41 @@ function BrandWithLogo({onClick}: {onClick: () => void}) {
         }}>
           <Logo />
         </div>
-        CabbageMeet
+        time2meet
       </Navbar.Brand>
     </LinkContainer>
   );
 }
 
 function AppRoot() {
-  // Eager fetching: these data will be needed later by other parts of the app,
-  // so load them now.
+  const dispatch = useAppDispatch();
+  const [authReady, setAuthReady] = useState(false);
+  const [showToggle, setShowToggle] = useState(false);
+
+  // All hooks must be called before any conditional returns
   useGetSelfInfoIfTokenIsPresent();
   useGetServerInfoQuery();
-
-  const [showToggle, setShowToggle] = useState(false);
   const tokenIsInURL = useExtractTokenFromQueryParams();
-  if (tokenIsInURL) {
-    // Don't make any requests yet until the token has been saved into
-    // LocalStorage and stored in the Redux slice.
-    // Otherwise the requests will be prematurely unauthenticated.
+
+  useEffect(() => {
+    const init = async () => {
+      await dispatch(loadTokenFromCognito() as any);
+      setAuthReady(true);
+    };
+    init();
+  }, [dispatch]);
+
+  if (!authReady) {
     return null;
   }
+
+  if (tokenIsInURL) {
+    return null;
+  }
+
   const onClickToggle = () => setShowToggle(true);
   const onHideToggle = () => setShowToggle(false);
+
   return (
     <div className="App d-flex flex-column">
       <Navbar expand="md" className="mt-3 mb-5">

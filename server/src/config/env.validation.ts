@@ -295,6 +295,19 @@ export class EnvironmentVariables {
   @Min(0)
   EMAIL_DAILY_LIMIT = 100;
 
+  // AWS Cognito
+  @IsOptional()
+  @IsString()
+  COGNITO_USER_POOL_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  COGNITO_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  COGNITO_REGION?: string;
+
   // If unspecified, an in-memory cache will be used.
   // Redis must be used if multiple instances of the application are running
   // simultaneously.

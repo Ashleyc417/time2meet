@@ -510,7 +510,7 @@ export async function createTokenResponse({
       iat: now,
       exp: now + 3600,
     },
-    'secret',
+    'secret' as any,
   );
   const body: Record<string, any> = {
     access_token,
