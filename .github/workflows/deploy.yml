@@ -1,0 +1,119 @@
+name: Deploy
+
+# Runs after every push to master ONLY if the CI workflow passes.
+# Builds Docker images for all three microservices, pushes them to ECR,
+# then SSHs into each EC2 instance and performs a rolling docker compose update.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [master]
+
+jobs:
+  deploy:
+    name: Build → ECR → EC2
+    runs-on: ubuntu-latest
+    # Only deploy when CI succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    env:
+      AWS_REGION_ECR: ${{ secrets.AWS_REGION_ECR }}   # Region where ECR repos live  e.g. us-west-2
+      AWS_REGION_EC2: ${{ secrets.AWS_REGION_EC2 }}   # Region where EC2/ALB/SSM/RDS live  e.g. us-east-2
+      ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}        # e.g. 123456789012.dkr.ecr.us-west-2.amazonaws.com
+
+    steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. AWS credentials ──────────────────────────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ secrets.AWS_REGION_ECR }}
+
+      # ── 3. Login to ECR ─────────────────────────────────────────────────────
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ── 4. Build & push all three microservice images ───────────────────────
+      - name: Build and push auth-service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.auth
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/time2meet/auth-service:latest
+            ${{ env.ECR_REGISTRY }}/time2meet/auth-service:${{ github.sha }}
+
+      - name: Build and push meetings-service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.meetings
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/time2meet/meetings-service:latest
+            ${{ env.ECR_REGISTRY }}/time2meet/meetings-service:${{ github.sha }}
+
+      - name: Build and push users-service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.users
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/time2meet/users-service:latest
+            ${{ env.ECR_REGISTRY }}/time2meet/users-service:${{ github.sha }}
+
+      # ── 5. Deploy to all ASG instances via SSM Run Command ──────────────────
+      # Targets every EC2 instance tagged Name=time2meet-ec2, so the deploy
+      # works regardless of how many instances the Auto Scaling Group is running.
+      # No fixed IPs or SSH keys required – the EC2 instance profile provides
+      # the necessary SSM permissions.
+      - name: Deploy to ASG instances via SSM
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --region "$AWS_REGION_EC2" \
+            --targets "Key=tag:Name,Values=time2meet-ec2" \
+            --document-name "AWS-RunShellScript" \
+            --timeout-seconds 300 \
+            --parameters "commands=[
+              \"set -e\",
+              \"cd /opt/time2meet\",
+              \"aws ecr get-login-password --region $AWS_REGION_ECR | docker login --username AWS --password-stdin $ECR_REGISTRY\",
+              \"docker compose -f docker-compose.prod.yml pull\",
+              \"for svc in auth-service meetings-service users-service; do docker compose -f docker-compose.prod.yml up -d --no-deps \$svc; sleep 10; done\",
+              \"docker image prune -f\"
+            ]" \
+            --query 'Command.CommandId' \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # Wait for all invocations to finish
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --region "$AWS_REGION_EC2" || true
+
+          # Print output from each instance and fail the job if any errored
+          FAILED=0
+          for TARGET in $(aws ssm list-command-invocations \
+            --command-id "$COMMAND_ID" --region "$AWS_REGION_EC2" \
+            --query 'CommandInvocations[].InstanceId' --output text); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" --instance-id "$TARGET" \
+              --region "$AWS_REGION_EC2" --query 'Status' --output text)
+            echo "Instance $TARGET: $STATUS"
+            if [ "$STATUS" != "Success" ]; then
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" --instance-id "$TARGET" \
+                --region "$AWS_REGION_EC2" --query 'StandardErrorContent' --output text
+              FAILED=1
+            fi
+          done
+          exit $FAILED

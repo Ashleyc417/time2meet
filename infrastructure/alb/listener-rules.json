@@ -1,103 +1,189 @@
 [
   {
-    "_comment": "ALB HTTPS Listener (port 443) – path-based routing to microservices",
-    "_note": "Rules are evaluated in priority order (lower number = higher priority). Default action forwards to auth-service.",
+    "_comment": "ALB HTTP Listener (port 80) – path-based routing to microservices",
+    "_note": "Rules are evaluated in priority order (lower number = higher priority). Default action forwards to users-service.",
+    "_target_groups": {
+      "time2meet-auth-tg":     "auth-service     port 3001 – /api/signup, /api/login, /api/logout, /redirect/*, /api/server-info",
+      "time2meet-meetings-tg": "meetings-service port 3002 – /api/meetings, /api/meetings/*",
+      "time2meet-users-tg":    "users-service    port 3003 – /api/me, /api/me/*, default"
+    },
+
+    "ListenerProtocol": "HTTP",
+    "ListenerPort": 80,
 
     "Rules": [
       {
+        "Priority": "1",
+        "Comment": "Meetings – exact path /api/meetings (POST create meeting)",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/api/meetings"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${MEETINGS_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
+        "Priority": "2",
+        "Comment": "Meetings – all sub-paths /api/meetings/* (GET, PATCH, DELETE, respondents, schedule)",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/api/meetings/*"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${MEETINGS_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
+        "Priority": "3",
+        "Comment": "Users – exact path /api/me (GET current user)",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/api/me"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${USERS_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
+        "Priority": "4",
+        "Comment": "Users – all sub-paths /api/me/* (PATCH, DELETE, calendar, meetings)",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/api/me/*"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${USERS_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
+        "Priority": "5",
+        "Comment": "Auth – POST /api/signup",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/api/signup"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
+        "Priority": "6",
+        "Comment": "Auth – POST /api/login",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/api/login"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
+        "Priority": "7",
+        "Comment": "Auth – POST /api/logout",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/api/logout"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
+        "Priority": "8",
+        "Comment": "Auth – Google OAuth2 social login/signup (login-with-google, signup-with-google)",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/api/*-with-google"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
+        "Priority": "9",
+        "Comment": "Auth – OAuth2 redirect callbacks (Google and Microsoft)",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/redirect/*"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
         "Priority": "10",
-        "Comment": "Auth endpoints – login, signup, logout, password reset, OAuth2 redirect",
+        "Comment": "Auth – GET /api/server-info (client feature flags, Cognito config)",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/api/server-info"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
+        "Priority": "11",
+        "Comment": "Auth – Microsoft OAuth2 social login/signup (login-with-microsoft, signup-with-microsoft)",
+        "Conditions": [
+          {
+            "Field": "path-pattern",
+            "PathPatternConfig": { "Values": ["/api/*-with-microsoft"] }
+          }
+        ],
+        "Actions": [
+          { "Type": "forward", "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}" }
+        ]
+      },
+      {
+        "Priority": "12",
+        "Comment": "Auth – email verification, password reset flows",
         "Conditions": [
           {
             "Field": "path-pattern",
             "PathPatternConfig": {
               "Values": [
-                "/api/signup",
                 "/api/verify-email",
-                "/api/login",
-                "/api/logout",
                 "/api/reset-password",
-                "/api/confirm-password-reset",
-                "/api/login-with-google",
-                "/api/login-with-microsoft",
-                "/api/signup-with-google",
-                "/api/signup-with-microsoft",
-                "/api/server-info",
-                "/redirect/*"
+                "/api/confirm-password-reset"
               ]
             }
           }
         ],
         "Actions": [
-          {
-            "Type": "forward",
-            "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}"
-          }
-        ]
-      },
-      {
-        "Priority": "20",
-        "Comment": "Meetings endpoints",
-        "Conditions": [
-          {
-            "Field": "path-pattern",
-            "PathPatternConfig": {
-              "Values": [
-                "/api/meetings",
-                "/api/meetings/*"
-              ]
-            }
-          }
-        ],
-        "Actions": [
-          {
-            "Type": "forward",
-            "TargetGroupArn": "${MEETINGS_SERVICE_TARGET_GROUP_ARN}"
-          }
-        ]
-      },
-      {
-        "Priority": "30",
-        "Comment": "User profile endpoints",
-        "Conditions": [
-          {
-            "Field": "path-pattern",
-            "PathPatternConfig": {
-              "Values": [
-                "/api/me",
-                "/api/me/*"
-              ]
-            }
-          }
-        ],
-        "Actions": [
-          {
-            "Type": "forward",
-            "TargetGroupArn": "${USERS_SERVICE_TARGET_GROUP_ARN}"
-          }
-        ]
-      },
-      {
-        "Priority": "40",
-        "Comment": "Health checks – all services expose /api/health",
-        "Conditions": [
-          {
-            "Field": "path-pattern",
-            "PathPatternConfig": {
-              "Values": ["/api/health"]
-            }
-          }
-        ],
-        "Actions": [
-          {
-            "Type": "forward",
-            "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}"
-          }
+          { "Type": "forward", "TargetGroupArn": "${AUTH_SERVICE_TARGET_GROUP_ARN}" }
         ]
       }
     ],
 
+    "DefaultAction": {
+      "Comment": "Default – unmatched paths fall through to users-service",
+      "Type": "forward",
+      "TargetGroupArn": "${USERS_SERVICE_TARGET_GROUP_ARN}"
+    },
+
     "HealthCheck": {
+      "Comment": "Each target group uses /api/health – all three services expose this endpoint",
       "Path": "/api/health",
       "Protocol": "HTTP",
       "HealthyThresholdCount": 2,

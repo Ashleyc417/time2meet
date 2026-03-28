@@ -1,0 +1,87 @@
+{
+  "_comment": "CloudWatch Log Groups for time2meet microservices",
+  "_cli": "Use the commands below to create log groups before first deploy, or let the awslogs Docker driver create them automatically (awslogs-create-group=true in docker-compose.prod.yml).",
+
+  "LogGroups": [
+    {
+      "logGroupName": "/time2meet",
+      "retentionInDays": 30,
+      "_comment": "Parent group; each microservice writes to a stream prefix under this group",
+      "_streams": {
+        "auth/*":     "auth-service HTTP logs (morgan combined)",
+        "meetings/*": "meetings-service HTTP logs",
+        "users/*":    "users-service HTTP logs"
+      },
+      "_cli": "aws logs create-log-group --log-group-name /time2meet && aws logs put-retention-policy --log-group-name /time2meet --retention-in-days 30"
+    },
+    {
+      "logGroupName": "/time2meet/system",
+      "retentionInDays": 14,
+      "_comment": "EC2 system logs collected by the CloudWatch Agent (see user-data.sh)",
+      "_cli": "aws logs create-log-group --log-group-name /time2meet/system && aws logs put-retention-policy --log-group-name /time2meet/system --retention-in-days 14"
+    }
+  ],
+
+  "MetricAlarms": [
+    {
+      "_comment": "Alert when the auth-service has elevated 5xx errors",
+      "AlarmName": "time2meet-auth-5xx",
+      "Namespace": "AWS/ApplicationELB",
+      "MetricName": "HTTPCode_Target_5XX_Count",
+      "Dimensions": [
+        { "Name": "TargetGroup", "Value": "${AUTH_SERVICE_TARGET_GROUP_SUFFIX}" },
+        { "Name": "LoadBalancer", "Value": "${ALB_SUFFIX}" }
+      ],
+      "Statistic": "Sum",
+      "Period": 60,
+      "EvaluationPeriods": 2,
+      "Threshold": 10,
+      "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+      "TreatMissingData": "notBreaching"
+    },
+    {
+      "_comment": "Alert when the meetings-service has elevated 5xx errors",
+      "AlarmName": "time2meet-meetings-5xx",
+      "Namespace": "AWS/ApplicationELB",
+      "MetricName": "HTTPCode_Target_5XX_Count",
+      "Dimensions": [
+        { "Name": "TargetGroup", "Value": "${MEETINGS_SERVICE_TARGET_GROUP_SUFFIX}" },
+        { "Name": "LoadBalancer", "Value": "${ALB_SUFFIX}" }
+      ],
+      "Statistic": "Sum",
+      "Period": 60,
+      "EvaluationPeriods": 2,
+      "Threshold": 10,
+      "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+      "TreatMissingData": "notBreaching"
+    },
+    {
+      "_comment": "Alert when the users-service has elevated 5xx errors",
+      "AlarmName": "time2meet-users-5xx",
+      "Namespace": "AWS/ApplicationELB",
+      "MetricName": "HTTPCode_Target_5XX_Count",
+      "Dimensions": [
+        { "Name": "TargetGroup", "Value": "${USERS_SERVICE_TARGET_GROUP_SUFFIX}" },
+        { "Name": "LoadBalancer", "Value": "${ALB_SUFFIX}" }
+      ],
+      "Statistic": "Sum",
+      "Period": 60,
+      "EvaluationPeriods": 2,
+      "Threshold": 10,
+      "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+      "TreatMissingData": "notBreaching"
+    },
+    {
+      "_comment": "Alert when any EC2 instance CPU is sustained above 80%",
+      "AlarmName": "time2meet-ec2-high-cpu",
+      "Namespace": "time2meet/EC2",
+      "MetricName": "cpu_usage_user",
+      "Statistic": "Average",
+      "Period": 300,
+      "EvaluationPeriods": 3,
+      "Threshold": 80,
+      "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+      "TreatMissingData": "notBreaching"
+    }
+  ]
+}
