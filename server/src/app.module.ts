@@ -13,6 +13,7 @@ import OAuth2Module from './oauth2/oauth2.module';
 import ServerInfoModule from './server-info/server-info.module';
 import ConfigModule from './config/config.module';
 import ConfigService from './config/config.service';
+import HealthModule from './health/health.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import ConfigService from './config/config.service';
     ServerInfoModule,
     CacherModule,
     RateLimiterModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

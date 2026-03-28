@@ -1,0 +1,42 @@
+{
+  "_comment": "RDS MariaDB parameter group for time2meet",
+  "_cli": "aws rds create-db-parameter-group --db-parameter-group-name time2meet-mariadb --db-parameter-group-family mariadb10.11 --description 'time2meet MariaDB parameters'",
+
+  "Parameters": [
+    {
+      "ParameterName": "character_set_server",
+      "ParameterValue": "utf8mb4",
+      "ApplyMethod": "immediate"
+    },
+    {
+      "ParameterName": "collation_server",
+      "ParameterValue": "utf8mb4_unicode_ci",
+      "ApplyMethod": "immediate"
+    },
+    {
+      "ParameterName": "max_connections",
+      "ParameterValue": "200",
+      "ApplyMethod": "immediate"
+    },
+    {
+      "ParameterName": "wait_timeout",
+      "ParameterValue": "28800",
+      "ApplyMethod": "immediate"
+    },
+    {
+      "ParameterName": "innodb_buffer_pool_size",
+      "ParameterValue": "{DBInstanceClassMemory*3/4}",
+      "ApplyMethod": "pending-reboot"
+    },
+    {
+      "ParameterName": "slow_query_log",
+      "ParameterValue": "1",
+      "ApplyMethod": "immediate"
+    },
+    {
+      "ParameterName": "long_query_time",
+      "ParameterValue": "2",
+      "ApplyMethod": "immediate"
+    }
+  ]
+}
