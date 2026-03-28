@@ -3,15 +3,22 @@ import Form from 'react-bootstrap/Form';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomOverlay from 'components/BottomOverlay';
 import styles from './Signup.module.css';
-import { getReqErrorMessage, useMutationWithPersistentError } from 'utils/requests.utils';
+// import { getReqErrorMessage, useMutationWithPersistentError } from 'utils/requests.utils';
 import ButtonWithSpinner from './ButtonWithSpinner';
-import { useSignupMutation } from 'slices/api';
+// import { useSignupMutation } from 'slices/api';
 import { HistoryContext } from './HistoryProvider';
-import { isVerifyEmailAddressResponse } from 'slices/enhancedApi';
-import VerifyEmailAddress from './SignupConfirmation';
+// import { isVerifyEmailAddressResponse } from 'slices/enhancedApi';
+// import VerifyEmailAddress from './SignupConfirmation';
 import WaitForServerInfo from './WaitForServerInfo';
 import OAuth2ProviderButtons from './OAuth2ProviderButtons';
 import useSetTitle from 'utils/title.hook';
+
+// for cognito
+import VerifyEmailCode from './VerifyEmailCode';
+import { useSignupMutation } from 'slices/api';
+import { getReqErrorMessage, useMutationWithPersistentError } from 'utils/requests.utils';
+import { isVerifyEmailAddressResponse } from 'slices/enhancedApi';
+import { cognitoSignUp } from 'utils/cognito-auth';
 
 export default function Signup() {
   const [name, setName] = useState('');
@@ -34,10 +41,11 @@ export default function Signup() {
   const redirectAfterSuccessfulSignup = useCallback(() => {
     navigate(lastNonAuthPathRef.current);
   }, [navigate]);
-
+  
   if (shouldShowVerificationPage) {
-    return <VerifyEmailAddress email={email} />;
+    return <VerifyEmailCode email={email} password={password} />;
   }
+
   return (
     <WaitForServerInfo>
       <div className={styles.signupContainer}>
@@ -65,40 +73,30 @@ function SignupForm({
   redirectAfterSuccessfulSignup: () => void,
 }) {
   const [validated, setValidated] = useState(false);
-  const [signup, {data, isLoading, isSuccess, error}] = useMutationWithPersistentError(useSignupMutation);
-  let onSubmit: React.FormEventHandler<HTMLFormElement> | undefined;
-  const submitBtnDisabled = isLoading;
-  if (!submitBtnDisabled) {
-    onSubmit = (ev) => {
-      ev.preventDefault();
-      const form = ev.currentTarget;
-      if (form.checkValidity()) {
-        signup({
-          name,
-          email,
-          password,
-        });
-      } else {
-        setValidated(true);
-      }
-    };
-  }
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isSuccess) {
-      if (isVerifyEmailAddressResponse(data!)) {
-        setShouldShowVerificationPage(true);
-      } else {
-        redirectAfterSuccessfulSignup();
-      }
+  const onSubmit: React.FormEventHandler<HTMLFormElement> = async (ev) => {
+    ev.preventDefault();
+    const form = ev.currentTarget;
+    if (!form.checkValidity()) {
+      setValidated(true);
+      return;
     }
-  }, [
-    data, isSuccess,
-    setShouldShowVerificationPage, redirectAfterSuccessfulSignup,
-  ]);
+    setIsLoading(true);
+    setError(null);
+    try {
+      await cognitoSignUp(name, email, password);
+      setShouldShowVerificationPage(true);
+    } catch (err: any) {
+      setError(err.message || 'Signup failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <Form noValidate className={styles.signupForm} {...{validated, onSubmit}}>
+    <Form noValidate className={styles.signupForm} validated={validated} onSubmit={onSubmit}>
       <h4 className="mb-5">Sign up</h4>
       <OAuth2ProviderButtons reason="signup" />
       <Form.Group controlId="signup-form-name">
@@ -131,8 +129,7 @@ function SignupForm({
         <Form.Label>Password</Form.Label>
         <Form.Control
           required
-          minLength={6}
-          maxLength={30}
+          minLength={8}
           placeholder="What would you like your password to be?"
           type="password"
           className="form-text-input"
@@ -140,15 +137,15 @@ function SignupForm({
           onChange={(ev) => setPassword(ev.target.value)}
         />
         <Form.Control.Feedback type="invalid">
-          Password must be between 6-30 characters.
+          Password must be at least 8 characters.
         </Form.Control.Feedback>
       </Form.Group>
       {error && (
         <p className="text-danger text-center mb-0 mt-3">
-          An error occurred: {getReqErrorMessage(error)}
+          An error occurred: {error}
         </p>
       )}
-      <SignUpOrLogin disabled={submitBtnDisabled} />
+      <SignUpOrLogin disabled={isLoading} />
     </Form>
   );
 }

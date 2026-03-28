@@ -26,7 +26,7 @@ import {
   oauth2ProviderNamesMap,
 } from '../oauth2/oauth2-common';
 import { AuthUser } from '../auth/auth-user.decorator';
-import JwtAuthGuard from '../auth/jwt-auth.guard';
+import { CognitoAuthGuard } from '../auth/cognito.guard';
 import {
   NotFoundResponse,
   UnauthorizedResponse,
@@ -63,7 +63,7 @@ export function UserToUserResponse(user: User): UserResponse {
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ type: UnauthorizedResponse })
 @Controller('me')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CognitoAuthGuard)
 export class UsersController {
   private oauth2Service: OAuth2Service;
 
