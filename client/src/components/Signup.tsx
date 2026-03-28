@@ -15,9 +15,6 @@ import useSetTitle from 'utils/title.hook';
 
 // for cognito
 import VerifyEmailCode from './VerifyEmailCode';
-import { useSignupMutation } from 'slices/api';
-import { getReqErrorMessage, useMutationWithPersistentError } from 'utils/requests.utils';
-import { isVerifyEmailAddressResponse } from 'slices/enhancedApi';
 import { cognitoSignUp } from 'utils/cognito-auth';
 
 export default function Signup() {
