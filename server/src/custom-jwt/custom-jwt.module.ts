@@ -40,6 +40,6 @@ class CustomJwtDepsModule {}
     }),
   ],
   providers: [CustomJwtService, JwtStrategy],
-  exports: [CustomJwtService, 'JWT_SIGNING_KEY'],
+  exports: [CustomJwtService, CustomJwtDepsModule],
 })
 export default class CustomJwtModule {}
