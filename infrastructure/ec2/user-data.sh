@@ -101,7 +101,7 @@ chown ec2-user:ec2-user /opt/time2meet/.env
 
 # ── 5. Clone repo and copy docker-compose.prod.yml ───────────────────────────
 dnf install -y git
-git clone https://github.com/Ashleyc417/time2meet.git /tmp/time2meet-repo
+git clone --branch refactor-for-microservices --single-branch https://github.com/Ashleyc417/time2meet.git /tmp/time2meet-repo
 cp /tmp/time2meet-repo/infrastructure/ec2/docker-compose.prod.yml /opt/time2meet/docker-compose.prod.yml
 chown ec2-user:ec2-user /opt/time2meet/docker-compose.prod.yml
 rm -rf /tmp/time2meet-repo
