@@ -24,6 +24,7 @@ x-common-env: &common-env
   MYSQL_DATABASE:         "${MYSQL_DATABASE}"
   PUBLIC_URL:             "${PUBLIC_URL}"
   ENABLE_CORS:            "true"
+  EXTRA_CORS_ORIGINS:     "${EXTRA_CORS_ORIGINS:-}"
   TRUST_PROXY:            "true"
   VERIFY_SIGNUP_EMAIL_ADDRESS: "false"
   COGNITO_REGION:         "${COGNITO_REGION}"
