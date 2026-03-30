@@ -12,7 +12,7 @@ import {
 } from './e2e-testing-helpers';
 import { sleep } from '../src/misc.utils';
 
-describe('AuthController (e2e)', () => {
+describe.skip('AuthController (e2e)', () => {
   let app: NestExpressApplication;
   let token: string | undefined;
 

@@ -20,8 +20,7 @@ import {
 } from '@nestjs/common';
 import ConfigService from '../config/config.service';
 import { AuthUser, MaybeAuthUser } from '../auth/auth-user.decorator';
-import { CognitoAuthGuard } from '../auth/cognito.guard';
-import { CognitoAuthGuard as OptionalCognitoAuthGuard } from '../auth/cognito.guard';
+import { CognitoAuthGuard, OptionalCognitoAuthGuard } from '../auth/cognito.guard';
 import User from '../users/user.entity';
 import CreateMeetingDto from './create-meeting.dto';
 import MeetingResponse from './meeting-response';

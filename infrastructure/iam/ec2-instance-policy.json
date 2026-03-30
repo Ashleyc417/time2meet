@@ -51,6 +51,17 @@
         "ssm:GetParametersByPath"
       ],
       "Resource": "arn:aws:ssm:*:*:parameter/time2meet/*"
+    },
+    {
+      "Sid": "ECRPull",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchCheckLayerAvailability"
+      ],
+      "Resource": "*"
     }
   ]
 }

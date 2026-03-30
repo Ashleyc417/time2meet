@@ -1,9 +1,9 @@
 name: Deploy
 
-# Runs after every push to master ONLY if the CI workflow passes.
-# Builds Docker images for all three microservices, pushes them to ECR,
-# then SSHs into each EC2 instance and performs a rolling docker compose update.
+# Triggered automatically after CI passes on the main branches,
+# OR manually from the GitHub Actions UI (Actions → Deploy → Run workflow).
 on:
+  workflow_dispatch:   # manual trigger – no CI gate
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -13,8 +13,9 @@ jobs:
   deploy:
     name: Build → ECR → EC2
     runs-on: ubuntu-latest
-    # Only deploy when CI succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # For workflow_run events only deploy when CI succeeded.
+    # workflow_dispatch bypasses this check entirely.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     env:
       AWS_REGION_ECR: ${{ secrets.AWS_REGION_ECR }}   # Region where ECR repos live  e.g. us-west-2
@@ -25,6 +26,8 @@ jobs:
       # ── 1. Checkout ─────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || github.event.workflow_run.head_sha }}
 
       # ── 2. AWS credentials ──────────────────────────────────────────────────
       - name: Configure AWS credentials
@@ -84,8 +87,8 @@ jobs:
             --timeout-seconds 300 \
             --parameters "commands=[
               \"set -e\",
-              \"cd /opt/time2meet\",
               \"aws ecr get-login-password --region $AWS_REGION_ECR | docker login --username AWS --password-stdin $ECR_REGISTRY\",
+              \"cd /opt/time2meet\",
               \"docker compose -f docker-compose.prod.yml pull\",
               \"for svc in auth-service meetings-service users-service; do docker compose -f docker-compose.prod.yml up -d --no-deps \$svc; sleep 10; done\",
               \"docker image prune -f\"
@@ -95,10 +98,18 @@ jobs:
 
           echo "SSM Command ID: $COMMAND_ID"
 
-          # Wait for all invocations to finish
-          aws ssm wait command-executed \
-            --command-id "$COMMAND_ID" \
-            --region "$AWS_REGION_EC2" || true
+          # Wait for all invocations to finish (poll each instance individually)
+          # aws ssm wait command-executed requires --instance-id, so we poll manually
+          echo "Waiting for SSM command to complete on all targets..."
+          for i in $(seq 1 30); do
+            PENDING=$(aws ssm list-command-invocations \
+              --command-id "$COMMAND_ID" --region "$AWS_REGION_EC2" \
+              --query 'CommandInvocations[?Status==`InProgress`||Status==`Pending`].InstanceId' \
+              --output text)
+            [ -z "$PENDING" ] && break
+            echo "Still running on: $PENDING (attempt $i/30)"
+            sleep 10
+          done
 
           # Print output from each instance and fail the job if any errored
           FAILED=0

@@ -1,47 +1,48 @@
-// import { ApiProperty } from '@nestjs/swagger';
-// import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
-// import LocalSignupDto from './local-signup.dto';
-
-// export class VerifyEmailAddressEntity extends LocalSignupDto {
-//   // Unix epoch timestamp
-//   // If the current time is greater than this number, the request is invalid
-//   @IsNumber()
-//   exp: number;
-// }
-
-// export default class VerifyEmailAddressDto {
-//   // encrypted JSON-encoded VerifyEmailAddressEntity
-//   @ApiProperty()
-//   @IsString()
-//   @IsNotEmpty()
-//   encrypted_entity: string;
-
-//   @ApiProperty()
-//   @IsString()
-//   @IsNotEmpty()
-//   iv: string;
-
-//   @ApiProperty()
-//   @IsString()
-//   @IsNotEmpty()
-//   salt: string;
-
-//   @ApiProperty()
-//   @IsString()
-//   @IsNotEmpty()
-//   tag: string;
-// }
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import LocalSignupDto from './local-signup.dto';
+
+// Used internally by the non-Cognito email verification flow
+export class VerifyEmailAddressEntity extends LocalSignupDto {
+  // Unix epoch timestamp — request is invalid after this time
+  @IsNumber()
+  exp: number;
+}
 
 export default class VerifyEmailAddressDto {
-  @ApiProperty()
+  // ── Cognito flow ────────────────────────────────────────────────────────────
+  @ApiProperty({ required: false })
   @IsEmail()
-  @IsNotEmpty()
-  email: string;
+  @IsOptional()
+  email?: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  code?: string;
+
+  // ── Non-Cognito (encrypted-entity) flow ────────────────────────────────────
+  @ApiProperty({ required: false })
   @IsString()
   @IsNotEmpty()
-  code: string;
+  @IsOptional()
+  encrypted_entity?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  iv?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  salt?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  tag?: string;
 }
