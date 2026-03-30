@@ -8,14 +8,15 @@
 #   - IAM instance profile with ec2-instance-policy.json attached
 #   - The following SSM parameters under /time2meet/:
 #       /time2meet/ecr-registry          e.g. 123456789012.dkr.ecr.us-west-2.amazonaws.com
-#       /time2meet/aws-region            e.g. us-west-2
+#       /time2meet/cognito-region        e.g. us-west-2  (may differ from the EC2 region)
 #       /time2meet/cognito-user-pool-id
 #       /time2meet/cognito-client-id
 #       /time2meet/mysql-host            RDS endpoint
 #       /time2meet/mysql-user
 #       /time2meet/mysql-password
 #       /time2meet/mysql-database
-#       /time2meet/public-url            ALB DNS or custom domain
+#       /time2meet/public-url            ALB DNS or domain – http:// is prepended if absent
+#   Optional (SMTP disabled if absent):
 #       /time2meet/smtp-host
 #       /time2meet/smtp-port
 #       /time2meet/smtp-from
@@ -23,10 +24,18 @@
 #       /time2meet/smtp-password
 set -euo pipefail
 
-# ── Helper: fetch an SSM parameter ──────────────────────────────────────────
+# ── Helpers: fetch SSM parameters ───────────────────────────────────────────
+# ssm: required – script aborts (set -e) if the parameter is missing
 ssm() {
   aws ssm get-parameter --name "$1" --with-decryption \
     --query 'Parameter.Value' --output text --region "$(ec2-metadata --region | cut -d' ' -f2)"
+}
+
+# ssm_opt: optional – returns empty string if the parameter does not exist
+ssm_opt() {
+  aws ssm get-parameter --name "$1" --with-decryption \
+    --query 'Parameter.Value' --output text \
+    --region "$(ec2-metadata --region | cut -d' ' -f2)" 2>/dev/null || echo ""
 }
 
 REGION=$(ec2-metadata --region | cut -d' ' -f2)
@@ -57,7 +66,14 @@ chown ec2-user:ec2-user /opt/time2meet
 
 ECR_REGISTRY=$(ssm /time2meet/ecr-registry)
 
-cat > /opt/time2meet/.env.common << EOF
+# Ensure PUBLIC_URL always has an http:// scheme so the env validator accepts it
+_PUBLIC_URL_RAW=$(ssm /time2meet/public-url)
+case "${_PUBLIC_URL_RAW}" in
+  http://*|https://*) PUBLIC_URL="${_PUBLIC_URL_RAW}" ;;
+  *) PUBLIC_URL="http://${_PUBLIC_URL_RAW}" ;;
+esac
+
+cat > /opt/time2meet/.env << EOF
 NODE_ENV=production
 DATABASE_TYPE=mariadb
 MYSQL_HOST=$(ssm /time2meet/mysql-host)
@@ -65,23 +81,23 @@ MYSQL_PORT=3306
 MYSQL_USER=$(ssm /time2meet/mysql-user)
 MYSQL_PASSWORD=$(ssm /time2meet/mysql-password)
 MYSQL_DATABASE=$(ssm /time2meet/mysql-database)
-PUBLIC_URL=$(ssm /time2meet/public-url)
+PUBLIC_URL=${PUBLIC_URL}
 ENABLE_CORS=true
 TRUST_PROXY=true
-VERIFY_SIGNUP_EMAIL_ADDRESS=true
-COGNITO_REGION=${REGION}
+VERIFY_SIGNUP_EMAIL_ADDRESS=false
+COGNITO_REGION=$(ssm /time2meet/cognito-region)
 COGNITO_USER_POOL_ID=$(ssm /time2meet/cognito-user-pool-id)
 COGNITO_CLIENT_ID=$(ssm /time2meet/cognito-client-id)
-SMTP_HOST=$(ssm /time2meet/smtp-host)
-SMTP_PORT=$(ssm /time2meet/smtp-port)
-SMTP_FROM=$(ssm /time2meet/smtp-from)
-SMTP_USER=$(ssm /time2meet/smtp-user)
-SMTP_PASSWORD=$(ssm /time2meet/smtp-password)
+SMTP_HOST=$(ssm_opt /time2meet/smtp-host)
+SMTP_PORT=$(ssm_opt /time2meet/smtp-port)
+SMTP_FROM=$(ssm_opt /time2meet/smtp-from)
+SMTP_USER=$(ssm_opt /time2meet/smtp-user)
+SMTP_PASSWORD=$(ssm_opt /time2meet/smtp-password)
 ECR_REGISTRY=${ECR_REGISTRY}
 AWS_REGION=${REGION}
 EOF
-chmod 600 /opt/time2meet/.env.common
-chown ec2-user:ec2-user /opt/time2meet/.env.common
+chmod 600 /opt/time2meet/.env
+chown ec2-user:ec2-user /opt/time2meet/.env
 
 # ── 5. Clone repo and copy docker-compose.prod.yml ───────────────────────────
 dnf install -y git
@@ -154,7 +170,7 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/time2meet
-EnvironmentFile=/opt/time2meet/.env.common
+EnvironmentFile=/opt/time2meet/.env
 ExecStart=/usr/local/lib/docker/cli-plugins/docker-compose -f docker-compose.prod.yml up -d
 ExecStop=/usr/local/lib/docker/cli-plugins/docker-compose -f docker-compose.prod.yml down
 StandardOutput=journal

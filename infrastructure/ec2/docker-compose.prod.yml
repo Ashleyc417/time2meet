@@ -4,22 +4,15 @@
 # workflow (or during initial bootstrap via user-data.sh).
 #
 # Images are pulled from ECR – no local builds happen on EC2.
-# Secrets are read from /opt/time2meet/.env.common (written by user-data.sh
+# Secrets are read from /opt/time2meet/.env (written by user-data.sh
 # from SSM Parameter Store – never committed to the repository).
+# Docker Compose automatically reads .env from the working directory for
+# variable substitution (${MYSQL_HOST}, ${ECR_REGISTRY}, etc.).
 #
-# Container logs are shipped to CloudWatch Logs via the awslogs driver.
-# The IAM instance profile (ec2-instance-policy.json) grants the
-# logs:PutLogEvents permission required for this to work.
+# Container logs go to stdout/stderr (visible via: docker compose logs -f).
 #
 # ALB health check target: GET /api/health → HTTP 200
 # Each service exposes /api/health so the ALB can check all three target groups.
-
-x-logging: &cloudwatch-logging
-  driver: awslogs
-  options:
-    awslogs-region: "${AWS_REGION}"
-    awslogs-group:  "/time2meet"
-    awslogs-create-group: "true"
 
 x-common-env: &common-env
   NODE_ENV:               production
@@ -32,15 +25,10 @@ x-common-env: &common-env
   PUBLIC_URL:             "${PUBLIC_URL}"
   ENABLE_CORS:            "true"
   TRUST_PROXY:            "true"
-  VERIFY_SIGNUP_EMAIL_ADDRESS: "true"
+  VERIFY_SIGNUP_EMAIL_ADDRESS: "false"
   COGNITO_REGION:         "${COGNITO_REGION}"
   COGNITO_USER_POOL_ID:   "${COGNITO_USER_POOL_ID}"
   COGNITO_CLIENT_ID:      "${COGNITO_CLIENT_ID}"
-  SMTP_HOST:              "${SMTP_HOST}"
-  SMTP_PORT:              "${SMTP_PORT}"
-  SMTP_FROM:              "${SMTP_FROM}"
-  SMTP_USER:              "${SMTP_USER}"
-  SMTP_PASSWORD:          "${SMTP_PASSWORD}"
 
 services:
   # ── Auth Service (port 3001) ─────────────────────────────────────────────
@@ -57,13 +45,6 @@ services:
       HOST: "0.0.0.0"
     ports:
       - "3001:3001"
-    logging:
-      <<: *cloudwatch-logging
-      options:
-        awslogs-region:       "${AWS_REGION}"
-        awslogs-group:        "/time2meet"
-        awslogs-stream-prefix: "auth"
-        awslogs-create-group: "true"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
       interval: 30s
@@ -82,13 +63,6 @@ services:
       HOST: "0.0.0.0"
     ports:
       - "3002:3002"
-    logging:
-      <<: *cloudwatch-logging
-      options:
-        awslogs-region:       "${AWS_REGION}"
-        awslogs-group:        "/time2meet"
-        awslogs-stream-prefix: "meetings"
-        awslogs-create-group: "true"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3002/api/health"]
       interval: 30s
@@ -107,13 +81,6 @@ services:
       HOST: "0.0.0.0"
     ports:
       - "3003:3003"
-    logging:
-      <<: *cloudwatch-logging
-      options:
-        awslogs-region:       "${AWS_REGION}"
-        awslogs-group:        "/time2meet"
-        awslogs-stream-prefix: "users"
-        awslogs-create-group: "true"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3003/api/health"]
       interval: 30s
