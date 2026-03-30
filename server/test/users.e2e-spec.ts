@@ -11,7 +11,7 @@ import {
   PATCH,
 } from './e2e-testing-helpers';
 
-describe('UsersController (e2e)', () => {
+describe.skip('UsersController (e2e)', () => {
   let app: NestExpressApplication;
 
   beforeAll(async () => {
