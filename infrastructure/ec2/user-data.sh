@@ -22,6 +22,7 @@
 #       /time2meet/smtp-from
 #       /time2meet/smtp-user
 #       /time2meet/smtp-password
+#       /time2meet/amplify-url         Amplify frontend URL for CORS (e.g. https://main.xxxxx.amplifyapp.com)
 set -euo pipefail
 
 # ── Helpers: fetch SSM parameters ───────────────────────────────────────────
@@ -84,6 +85,7 @@ MYSQL_PASSWORD=$(ssm /time2meet/mysql-password)
 MYSQL_DATABASE=$(ssm /time2meet/mysql-database)
 PUBLIC_URL=${PUBLIC_URL}
 ENABLE_CORS=true
+EXTRA_CORS_ORIGINS=${EXTRA_CORS_ORIGINS}
 TRUST_PROXY=true
 VERIFY_SIGNUP_EMAIL_ADDRESS=false
 COGNITO_REGION=$(ssm /time2meet/cognito-region)
@@ -94,6 +96,7 @@ SMTP_PORT=$(ssm_opt /time2meet/smtp-port)
 SMTP_FROM=$(ssm_opt /time2meet/smtp-from)
 SMTP_USER=$(ssm_opt /time2meet/smtp-user)
 SMTP_PASSWORD=$(ssm_opt /time2meet/smtp-password)
+EXTRA_CORS_ORIGINS=$(ssm_opt /time2meet/amplify-url)
 ECR_REGISTRY=${ECR_REGISTRY}
 AWS_REGION=${REGION}
 EOF
@@ -102,7 +105,7 @@ chown ec2-user:ec2-user /opt/time2meet/.env
 
 # ── 5. Clone repo and copy docker-compose.prod.yml ───────────────────────────
 dnf install -y git
-git clone --branch refactor-for-microservices --single-branch https://github.com/Ashleyc417/time2meet.git /tmp/time2meet-repo
+git clone --branch master --single-branch https://github.com/Ashleyc417/time2meet.git /tmp/time2meet-repo
 cp /tmp/time2meet-repo/infrastructure/ec2/docker-compose.prod.yml /opt/time2meet/docker-compose.prod.yml
 chown ec2-user:ec2-user /opt/time2meet/docker-compose.prod.yml
 rm -rf /tmp/time2meet-repo
