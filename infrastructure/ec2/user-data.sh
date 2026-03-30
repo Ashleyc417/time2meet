@@ -24,7 +24,6 @@
 #       /time2meet/smtp-password
 #   Optional (CORS – the Amplify frontend URL):
 #       /time2meet/amplify-url          e.g. https://main.xxxx.amplifyapp.com
-#       /time2meet/amplify-url         Amplify frontend URL for CORS (e.g. https://main.xxxxx.amplifyapp.com)
 set -euo pipefail
 
 # ── Helpers: fetch SSM parameters ───────────────────────────────────────────
@@ -77,6 +76,8 @@ case "${_PUBLIC_URL_RAW}" in
   *) PUBLIC_URL="http://${_PUBLIC_URL_RAW}" ;;
 esac
 
+EXTRA_CORS_ORIGINS=$(ssm_opt /time2meet/amplify-url)
+
 cat > /opt/time2meet/.env << EOF
 NODE_ENV=production
 DATABASE_TYPE=mariadb
@@ -98,7 +99,6 @@ SMTP_PORT=$(ssm_opt /time2meet/smtp-port)
 SMTP_FROM=$(ssm_opt /time2meet/smtp-from)
 SMTP_USER=$(ssm_opt /time2meet/smtp-user)
 SMTP_PASSWORD=$(ssm_opt /time2meet/smtp-password)
-EXTRA_CORS_ORIGINS=$(ssm_opt /time2meet/amplify-url)
 ECR_REGISTRY=${ECR_REGISTRY}
 AWS_REGION=${REGION}
 EOF
