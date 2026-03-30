@@ -49,12 +49,9 @@ systemctl enable docker
 systemctl start docker
 usermod -aG docker ec2-user
 
-# docker compose v2 plugin
-mkdir -p /usr/local/lib/docker/cli-plugins
-curl -sSL \
-  "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" \
-  -o /usr/local/lib/docker/cli-plugins/docker-compose
-chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+# Docker Compose v2 plugin – install via dnf (Amazon Linux 2023 repo,
+# more reliable than downloading a binary from GitHub at boot time)
+dnf install -y docker-compose-plugin
 
 # ── 3. App directory ─────────────────────────────────────────────────────────
 mkdir -p /opt/time2meet
@@ -171,8 +168,8 @@ Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/time2meet
 EnvironmentFile=/opt/time2meet/.env
-ExecStart=/usr/local/lib/docker/cli-plugins/docker-compose -f docker-compose.prod.yml up -d
-ExecStop=/usr/local/lib/docker/cli-plugins/docker-compose -f docker-compose.prod.yml down
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml down
 StandardOutput=journal
 StandardError=journal
 
