@@ -22,6 +22,8 @@
 #       /time2meet/smtp-from
 #       /time2meet/smtp-user
 #       /time2meet/smtp-password
+#   Optional (CORS – the Amplify frontend URL):
+#       /time2meet/amplify-url          e.g. https://main.xxxx.amplifyapp.com
 #       /time2meet/amplify-url         Amplify frontend URL for CORS (e.g. https://main.xxxxx.amplifyapp.com)
 set -euo pipefail
 
