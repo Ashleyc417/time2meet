@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ master, refactor-for-microservices ]
+    branches: [ master ]
   pull_request:
-    branches: [ master, refactor-for-microservices ]
+    branches: [ master ]
 
 jobs:
   server:
