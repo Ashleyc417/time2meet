@@ -40,6 +40,6 @@ class CustomJwtDepsModule {}
     }),
   ],
   providers: [CustomJwtService, JwtStrategy],
-  exports: [CustomJwtService],
+  exports: [CustomJwtService, CustomJwtDepsModule],
 })
 export default class CustomJwtModule {}

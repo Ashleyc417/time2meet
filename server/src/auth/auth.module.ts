@@ -3,7 +3,7 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import AuthService from './auth.service';
 import UsersService from '../users/users.service';
-import { CognitoAuthGuard } from './cognito.guard';
+import { CognitoAuthGuard, OptionalCognitoAuthGuard } from './cognito.guard';
 import OptionalJwtAuthGuard from './optional-jwt-auth.guard';
 import CustomJwtModule from '../custom-jwt/custom-jwt.module';
 import OAuth2Module from '../oauth2/oauth2.module';
@@ -25,8 +25,8 @@ import ConfigService from '../config/config.service';
     MailModule,
     ConfigModule,
   ],
-  providers: [AuthService, CognitoAuthGuard, OptionalJwtAuthGuard, ConfigService],
-  exports: [AuthService, CognitoAuthGuard],
+  providers: [AuthService, CognitoAuthGuard, OptionalCognitoAuthGuard, OptionalJwtAuthGuard, ConfigService],
+  exports: [AuthService, CognitoAuthGuard, OptionalCognitoAuthGuard],
   controllers: [AuthController],
 })
 export default class AuthModule {}
