@@ -1,9 +1,9 @@
 name: Deploy
 
-# Runs after every push to master ONLY if the CI workflow passes.
-# Builds Docker images for all three microservices, pushes them to ECR,
-# then SSHs into each EC2 instance and performs a rolling docker compose update.
+# Triggered automatically after CI passes on the main branches,
+# OR manually from the GitHub Actions UI (Actions → Deploy → Run workflow).
 on:
+  workflow_dispatch:   # manual trigger – no CI gate
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -13,8 +13,9 @@ jobs:
   deploy:
     name: Build → ECR → EC2
     runs-on: ubuntu-latest
-    # Only deploy when CI succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # For workflow_run events only deploy when CI succeeded.
+    # workflow_dispatch bypasses this check entirely.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     env:
       AWS_REGION_ECR: ${{ secrets.AWS_REGION_ECR }}   # Region where ECR repos live  e.g. us-west-2
@@ -25,6 +26,8 @@ jobs:
       # ── 1. Checkout ─────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || github.event.workflow_run.head_sha }}
 
       # ── 2. AWS credentials ──────────────────────────────────────────────────
       - name: Configure AWS credentials
