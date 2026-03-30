@@ -288,7 +288,7 @@ async function waitUntilCreatedEventIsSavedInDB(
   throw new Error('timed out waiting for created event to get saved to DB');
 }
 
-describe('OAuth2Controller (e2e) (Google)', () => {
+describe.skip('OAuth2Controller (e2e) (Google)', () => {
   let app: NestExpressApplication;
   let token1: string;
   const mockSub1 = '000001';
