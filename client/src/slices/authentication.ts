@@ -70,7 +70,7 @@ export const loadTokenFromCognito =
   (): AppThunk => async (dispatch) => {
     try {
       const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString() ?? null;
+      const token = session.tokens?.idToken?.toString() ?? null;
 
       //temp
       console.log('loadTokenFromCognito token:', token ? 'present' : 'null');
