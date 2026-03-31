@@ -24,7 +24,7 @@ export class CognitoAuthGuard implements CanActivate {
       this.verifier = CognitoJwtVerifier.create({
         userPoolId: userPoolId as string,
         clientId: clientId as string,
-        tokenUse: 'access',
+        tokenUse: 'id',
       });
     }
   }
@@ -36,8 +36,13 @@ export class CognitoAuthGuard implements CanActivate {
     if (!token) throw new UnauthorizedException();
     try {
       const payload = await this.verifier!.verify(token);
-      const user = await this.usersService.findOneByEmail(payload.email as string);
-      if (!user) throw new UnauthorizedException();
+      const email = payload.email as string;
+      let user = await this.usersService.findOneByEmail(email);
+      if (!user) {
+        // First login: auto-provision the user from their Cognito profile
+        const name = (payload['name'] as string | undefined) || email.split('@')[0];
+        user = await this.usersService.create({ Name: name, Email: email });
+      }
       req.user = user;
       return true;
     } catch {
@@ -62,7 +67,7 @@ export class OptionalCognitoAuthGuard implements CanActivate {
       this.verifier = CognitoJwtVerifier.create({
         userPoolId: userPoolId as string,
         clientId: clientId as string,
-        tokenUse: 'access',
+        tokenUse: 'id',
       });
     }
   }
@@ -80,8 +85,13 @@ export class OptionalCognitoAuthGuard implements CanActivate {
     }
     try {
       const payload = await this.verifier!.verify(token);
-      const user = await this.usersService.findOneByEmail(payload.email as string);
-      req.user = user ?? null;
+      const email = payload.email as string;
+      let user = await this.usersService.findOneByEmail(email);
+      if (!user) {
+        const name = (payload['name'] as string | undefined) || email.split('@')[0];
+        user = await this.usersService.create({ Name: name, Email: email });
+      }
+      req.user = user;
     } catch {
       req.user = null;
     }
