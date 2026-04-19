@@ -54,7 +54,7 @@ export default function MeetingAboutPrompt({
   const handleAutoFill = async () => {
     setIsGenerating(true);
     try {
-        const res = await fetch(`${BASE_URL}/api/bedrock/generate-description`, {
+        const res = await fetch('https://cabbagemeet-alb-1313623106.us-west-1.elb.amazonaws.com/api/bedrock/generate-description', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ meetingName }),
