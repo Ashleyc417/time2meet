@@ -53,7 +53,7 @@ export default function MeetingAboutPrompt({
   const handleAutoFill = async () => {
     setIsGenerating(true);
     try {
-        const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/bedrock/generate-description`, {
+        const res = await fetch('https://d10pcz6d75qyf0.cloudfront.net/api/bedrock/generate-description', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ meetingName }),
