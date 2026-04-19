@@ -7,8 +7,8 @@ import BottomOverlay from "components/BottomOverlay";
 import MeetingAboutPrompt from "components/MeetingForm/MeetingAboutPrompt";
 import MeetingTimesPrompt from "components/MeetingForm/MeetingTimesPrompt";
 import Calendar from "components/DayPicker/Calendar";
-import 'components/DayPicker/DayPicker.css';
-import 'components/MeetingForm/MeetingForm.css';
+import '../../components/DayPicker/DayPicker.css';
+import '../../components/MeetingForm/MeetingForm.css';
 import { resetSelectedDates, selectSelectedDates, setSelectedDates } from "slices/selectedDates";
 import { arrayToObject } from "utils/arrays.utils";
 import { useToast } from "components/Toast";
@@ -104,7 +104,7 @@ export default function EditMeeting({
   return (
     <Form className="edit-meeting">
       <MeetingNamePrompt {...{meetingName, setMeetingName, setIsEditing, onSave, isLoading, error}} />
-      <MeetingAboutPrompt {...{meetingAbout, setMeetingAbout}} />
+      <MeetingAboutPrompt {...{meetingAbout, setMeetingAbout, meetingName}} />
       <div className="create-meeting-form-group">
         <p className="fs-5">On which days would you like to meet?</p>
         <Calendar firstVisibleDate={meeting.tentativeDates[0]} />
