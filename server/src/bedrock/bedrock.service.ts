@@ -3,7 +3,7 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 
 @Injectable()
 export class BedrockService {
-  private client = new BedrockRuntimeClient({ region: 'us-east-1' });
+  private client = new BedrockRuntimeClient({ region: 'us-west-2' });
 
   async generateMeetingDescription(meetingName: string): Promise<string> {
     const command = new InvokeModelCommand({
