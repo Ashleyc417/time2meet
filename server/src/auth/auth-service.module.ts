@@ -21,7 +21,6 @@ import RateLimiterModule from '../rate-limiter/rate-limiter.module';
 import ServerInfoModule from '../server-info/server-info.module';
 import HealthModule from '../health/health.module';
 import OAuth2Module from '../oauth2/oauth2.module';
-import { BedrockModule } from '../bedrock/bedrock.module'; // for genAI
 
 @Module({
   imports: [
@@ -34,7 +33,6 @@ import { BedrockModule } from '../bedrock/bedrock.module'; // for genAI
     RateLimiterModule,
     ServerInfoModule,
     HealthModule,
-    BedrockModule,
   ],
 })
 export class AuthServiceModule {}

@@ -60,7 +60,6 @@ export default function MeetingForm() {
       <MeetingAboutPrompt
         meetingAbout={meetingAbout}
         setMeetingAbout={setMeetingAbout}
-        meetingName={meetingName}
       />
       <MeetingTimesPrompt
         startTime={startTime}

@@ -36,8 +36,6 @@
     "migration:run:postgres": "DATABASE_TYPE=postgres typeorm-ts-node-esm migration:run -d datasource.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock": "^3.1032.0",
-    "@aws-sdk/client-bedrock-runtime": "^3.1032.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.1014.0",
     "@nestjs/common": "^9.4.2",
     "@nestjs/core": "^9.4.2",
