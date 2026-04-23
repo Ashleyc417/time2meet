@@ -15,6 +15,9 @@ import ConfigModule from './config/config.module';
 import ConfigService from './config/config.service';
 import HealthModule from './health/health.module';
 
+// For AWS Bedrock and the genAI
+import { BedrockModule } from './bedrock/bedrock.module';
+
 @Module({
   imports: [
     ...getCommonImports(),
@@ -41,6 +44,7 @@ import HealthModule from './health/health.module';
     CacherModule,
     RateLimiterModule,
     HealthModule,
+    BedrockModule,
   ],
 })
 export class AppModule {}
