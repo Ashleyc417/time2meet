@@ -1,15 +1,10 @@
-<p align="center">
-  <img src="./client/public/logo192.png" width="120" alt="CabbageMeet logo" />
-</p>
-
-<p align="center">An online application for scheduling group meetings</p>
-
-[![](https://github.com/maxerenberg/cabbagemeet/workflows/CI/badge.svg)](https://github.com/maxerenberg/cabbagemeet/actions?query=workflow%3ACI)
-
 ## Description
-[CabbageMeet](https://cabbagemeet.com) aims to be an open-source alternative
-to LettuceMeet. It is a web-based application for
-scheduling meetings between two or more people.
+time2meet is an AWS cloud-based version of Cabbage Meet
+(https://github.com/maxerenberg/cabbagemeet), a meeting scheduler calendar web 
+application. Refactored for microservice architecture and supported by AWS
+infrastructure, time2meet expands upon Cabbage Meet by replacing email-based
+authentication with AWS Cognito and introduced generative AI summaries through
+AWS Bedrock.
 
 Meeting respondents can submit their availabilities by clicking or dragging
 their available times on a grid, making it easier to see the times at which
@@ -19,50 +14,23 @@ a meeting is scheduled.
 Google/Outlook calendar integration is also supported, so an event can be
 created on your personal calendar when a meeting is scheduled.
 
-## Running in development mode
-### Backend
-```bash
-cd server
-npm install
-# Will listen on port 3001 by default, set PORT in .development.env to
-# change this
-npm start
+Production domain: https://master.d2fubs3yfigftd.amplifyapp.com/
 
-# Open a new terminal window
-# The mock SMTP server is needed for signup email verification
-# Set VERIFY_SIGNUP_EMAIL_ADDRESS=false in .development.env to disable it
-cd server
-scripts/mockSmtpServer.js
-```
+## Architecture
+### Code
+Source code is split into three microservices: auth, users, and meetings.
+AWS Cognito and Bedrock were implemented using GitHub Actions CI/CD pipelines.
+Each microservice is containerized and deployed using Docker.
 
 ### Frontend
-```bash
-# Start the React app
-cd client
-npm install
-# Will listen on port 3000 by default and proxy API requests to port 3001
-# Set the environment variables PORT and PROXY_PORT to change this
-npm start
-```
+AWS Amplify hosts the client-side code while also enabling CI/CD workflows.
 
-## Running in production mode
-```bash
-# Create a static build
-cd client
-# set the env variable REACT_APP_API_BASE_URL if the domain of the
-# API server is not the same as the website itself
-npm run build
+### Backend Servers
+AWS EC2 instances in an Auto Scaling Group are connected to AWS CloudFront
+with a Load Balancer in place. This allows for HTTPS requests using CloudFront's
+default certificate. The Docker containers are kept in ECR private repositories
+and pulled for each EC2 instance.
 
-cd ../server
-# Create a symlink to the static build folder (or just copy it)
-ln -sf ../client/build client
-npm run build
-# Set any necessary environment variables
-# See the server README for more details
-vim .env
-# Start the app
-npm run start:prod
-```
-
-## Logo credits
-* https://freesvg.org/cabbage-26939
+### Database
+An AWS RDS MariaDB instance is used as the master database. Data at rest is encrypted
+with AWS KMS, credentials are stored and also encrypted by AWS KMS in AWS SSM.
